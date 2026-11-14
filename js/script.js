@@ -118,45 +118,181 @@ if (yearElement) {
 }
 
 /* ==========================================
-   PROJECT IMAGE FALLBACKS
+   PROJECT LIGHTBOX MODAL & INTERACTION
    ========================================== */
 
-document.querySelectorAll(".project-image img").forEach((image) => {
-  const placeholder = image.parentElement.querySelector(
-    ".image-placeholder"
-  );
+const lightbox = document.querySelector("#project-lightbox");
+const lightboxImage = document.querySelector("#lightbox-image");
+const lightboxProjectBadge = document.querySelector("#lightbox-project-badge");
+const lightboxCounter = document.querySelector("#lightbox-counter");
+const lightboxCaption = document.querySelector("#lightbox-caption");
+const lightboxCloseBtn = document.querySelector("#lightbox-close");
+const lightboxPrevBtn = document.querySelector("#lightbox-prev");
+const lightboxNextBtn = document.querySelector("#lightbox-next");
 
-  function showImage() {
-    if (image.naturalWidth === 0) {
-      return;
+if (lightbox && lightboxImage) {
+  let currentProjectCells = [];
+  let currentIndex = 0;
+  let lastFocusedElement = null;
+
+  function updateLightbox() {
+    if (!currentProjectCells.length) return;
+
+    const cell = currentProjectCells[currentIndex];
+    const src = cell.getAttribute("data-src");
+    const caption = cell.getAttribute("data-caption") || "";
+    const project = cell.getAttribute("data-project") || "";
+    const imgEl = cell.querySelector("img");
+    const alt = imgEl ? imgEl.getAttribute("alt") : caption;
+
+    lightboxImage.classList.add("is-loading");
+
+    const tempImg = new Image();
+    tempImg.onload = () => {
+      lightboxImage.src = src;
+      lightboxImage.alt = alt;
+      lightboxImage.classList.remove("is-loading");
+    };
+    tempImg.onerror = () => {
+      lightboxImage.src = src;
+      lightboxImage.alt = alt;
+      lightboxImage.classList.remove("is-loading");
+    };
+    tempImg.src = src;
+
+    if (lightboxProjectBadge) {
+      lightboxProjectBadge.textContent = project;
     }
-
-    image.hidden = false;
-
-    if (placeholder) {
-      placeholder.hidden = true;
+    if (lightboxCounter) {
+      lightboxCounter.textContent = `${currentIndex + 1} / ${currentProjectCells.length}`;
+    }
+    if (lightboxCaption) {
+      lightboxCaption.textContent = caption;
     }
   }
 
-  function showPlaceholder() {
-    image.hidden = true;
+  function openLightbox(cells, index, triggerEl) {
+    currentProjectCells = Array.from(cells);
+    currentIndex = index >= 0 && index < currentProjectCells.length ? index : 0;
+    lastFocusedElement = triggerEl || document.activeElement;
 
-    if (placeholder) {
-      placeholder.hidden = false;
-    }
-  }
+    updateLightbox();
 
-  image.addEventListener("load", showImage);
-  image.addEventListener("error", showPlaceholder);
-
-  if (image.complete) {
-    if (image.naturalWidth > 0) {
-      showImage();
+    if (typeof lightbox.showModal === "function") {
+      lightbox.showModal();
     } else {
-      showPlaceholder();
+      lightbox.setAttribute("open", "");
+    }
+
+    if (lightboxCloseBtn) {
+      lightboxCloseBtn.focus();
     }
   }
-});
+
+  function closeLightbox() {
+    if (typeof lightbox.close === "function") {
+      lightbox.close();
+    } else {
+      lightbox.removeAttribute("open");
+    }
+
+    if (lastFocusedElement && typeof lastFocusedElement.focus === "function") {
+      lastFocusedElement.focus();
+    }
+  }
+
+  function nextPhoto() {
+    if (!currentProjectCells.length) return;
+    currentIndex = (currentIndex + 1) % currentProjectCells.length;
+    updateLightbox();
+  }
+
+  function prevPhoto() {
+    if (!currentProjectCells.length) return;
+    currentIndex = (currentIndex - 1 + currentProjectCells.length) % currentProjectCells.length;
+    updateLightbox();
+  }
+
+  // Attach click listener to each cell and the project view button
+  document.querySelectorAll(".project-card").forEach((card) => {
+    const cells = card.querySelectorAll(".gallery-cell");
+    cells.forEach((cell, idx) => {
+      cell.addEventListener("click", () => {
+        openLightbox(cells, idx, cell);
+      });
+    });
+
+    const viewAllBtn = card.querySelector(".view-gallery-btn");
+    if (viewAllBtn) {
+      viewAllBtn.addEventListener("click", () => {
+        openLightbox(cells, 0, viewAllBtn);
+      });
+    }
+  });
+
+  if (lightboxCloseBtn) {
+    lightboxCloseBtn.addEventListener("click", closeLightbox);
+  }
+  if (lightboxNextBtn) {
+    lightboxNextBtn.addEventListener("click", nextPhoto);
+  }
+  if (lightboxPrevBtn) {
+    lightboxPrevBtn.addEventListener("click", prevPhoto);
+  }
+
+  // Close when clicking on backdrop outside the dialog box
+  lightbox.addEventListener("click", (event) => {
+    const dialogBox = lightbox.querySelector(".lightbox-dialog");
+    if (!dialogBox) return;
+    const rect = dialogBox.getBoundingClientRect();
+    const clickedInside = (
+      rect.top <= event.clientY &&
+      event.clientY <= rect.top + rect.height &&
+      rect.left <= event.clientX &&
+      event.clientX <= rect.left + rect.width
+    );
+    if (!clickedInside) {
+      closeLightbox();
+    }
+  });
+
+  // Keyboard navigation
+  lightbox.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeLightbox();
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      nextPhoto();
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      prevPhoto();
+    }
+  });
+
+  // Touch swipe support for mobile and tablets
+  let touchStartX = 0;
+  let touchEndX = 0;
+  const stage = lightbox.querySelector(".lightbox-stage");
+
+  if (stage) {
+    stage.addEventListener("touchstart", (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    stage.addEventListener("touchend", (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      const diff = touchEndX - touchStartX;
+      if (Math.abs(diff) > 40) {
+        if (diff < 0) {
+          nextPhoto();
+        } else {
+          prevPhoto();
+        }
+      }
+    }, { passive: true });
+  }
+}
 
 /* ==========================================
    WHATSAPP CONTACT FORM
