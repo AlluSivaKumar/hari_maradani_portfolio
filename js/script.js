@@ -741,3 +741,157 @@ if (contactForm) {
     window.location.assign(whatsappUrl);
   });
 }
+
+/* ==========================================
+   ATMOSPHERE THEME CONTROLLER (ATELIER, SUN GOLDEN, NAIR)
+   ========================================== */
+
+(function initAtmosphereThemes() {
+  const THEME_STORAGE_KEY = "hari_portfolio_theme";
+  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+  const allThemeButtons = document.querySelectorAll("[data-theme-set]");
+  const mobileThemeCurrent = document.getElementById("mobile-theme-current");
+
+  const THEMES = {
+    atelier: {
+      name: "Atelier",
+      color: "#f6f3ec",
+      toast: "Atelier Mode · Studio Canvas & Linen"
+    },
+    "sun-golden": {
+      name: "Sun Golden",
+      color: "#faf4e8",
+      toast: "Sun Golden Mode · Sunlit Amber & Brass"
+    },
+    nair: {
+      name: "Nair",
+      color: "#121311",
+      toast: "Nair Mode · Noir Charcoal & Champagne Gold"
+    }
+  };
+
+  function normalizeTheme(val) {
+    if (!val) return "atelier";
+    const lower = String(val).toLowerCase().trim();
+    if (lower === "noir" || lower === "nair" || lower === "dark") return "nair";
+    if (lower === "sun" || lower === "golden" || lower === "sungolden" || lower === "sun-golden") return "sun-golden";
+    return "atelier";
+  }
+
+  function applyTheme(themeKey, { save = true, showToast = false } = {}) {
+    const validTheme = normalizeTheme(themeKey);
+    const themeConfig = THEMES[validTheme] || THEMES.atelier;
+
+    // Apply attribute to <html> element
+    document.documentElement.setAttribute("data-theme", validTheme);
+
+    // Update <meta name="theme-color"> for browsers / mobile chrome
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute("content", themeConfig.color);
+    }
+
+    // Update all theme buttons in header and footer
+    allThemeButtons.forEach((btn) => {
+      const btnTheme = normalizeTheme(btn.getAttribute("data-theme-set"));
+      const isActive = btnTheme === validTheme;
+      btn.classList.toggle("is-active", isActive);
+      btn.setAttribute("aria-checked", String(isActive));
+    });
+
+    // Update mobile drawer indicator
+    if (mobileThemeCurrent) {
+      mobileThemeCurrent.textContent = themeConfig.name;
+    }
+
+    // Persist to local storage
+    if (save) {
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, validTheme);
+      } catch (err) {
+        // Storage disabled or private browsing
+      }
+    }
+
+    // Display temporary luxury toast notification
+    if (showToast) {
+      displayThemeToast(themeConfig.toast);
+    }
+
+    // Dispatch event for other handlers
+    window.dispatchEvent(new CustomEvent("atmospherechange", { detail: { theme: validTheme } }));
+  }
+
+  function displayThemeToast(message) {
+    // Remove existing toast if any
+    const existing = document.querySelector(".theme-switch-toast");
+    if (existing) {
+      existing.remove();
+    }
+
+    const toast = document.createElement("div");
+    toast.className = "theme-switch-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toast.innerHTML = `<span style="display:inline-block; transform: scale(1.15);">✨</span> <span>${message}</span>`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(-10px)";
+      toast.style.transition = "opacity 200ms ease, transform 200ms ease";
+      setTimeout(() => toast.remove(), 220);
+    }, 2000);
+  }
+
+  // Check URL param first (e.g., ?theme=sun-golden or ?theme=nair)
+  const urlParams = new URLSearchParams(window.location.search);
+  const themeParam = urlParams.get("theme");
+
+  let initialTheme = "atelier";
+  if (themeParam) {
+    initialTheme = normalizeTheme(themeParam);
+  } else {
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      if (stored) {
+        initialTheme = normalizeTheme(stored);
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  // Apply initial theme without toast
+  applyTheme(initialTheme, { save: false, showToast: false });
+
+  // Attach click listeners to all theme buttons
+  allThemeButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetTheme = btn.getAttribute("data-theme-set");
+      applyTheme(targetTheme, { save: true, showToast: true });
+    });
+
+    // Keyboard Arrow navigation for radio group
+    btn.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const parent = btn.closest('[role="radiogroup"]');
+        if (!parent) return;
+        const groupBtns = Array.from(parent.querySelectorAll("[data-theme-set]"));
+        const idx = groupBtns.indexOf(btn);
+        const next = groupBtns[(idx + 1) % groupBtns.length];
+        next.focus();
+        next.click();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const parent = btn.closest('[role="radiogroup"]');
+        if (!parent) return;
+        const groupBtns = Array.from(parent.querySelectorAll("[data-theme-set]"));
+        const idx = groupBtns.indexOf(btn);
+        const prev = groupBtns[(idx - 1 + groupBtns.length) % groupBtns.length];
+        prev.focus();
+        prev.click();
+      }
+    });
+  });
+})();

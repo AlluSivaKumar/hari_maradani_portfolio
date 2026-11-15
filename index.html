@@ -37,6 +37,46 @@
           </span>
         </a>
 
+        <!-- Visual Atmosphere Mode Switcher (Atelier, Sun Golden, Nair) -->
+        <div class="theme-switcher" role="radiogroup" aria-label="Visual atmosphere mode">
+          <button
+            type="button"
+            class="theme-btn is-active"
+            data-theme-set="atelier"
+            role="radio"
+            aria-checked="true"
+            aria-label="Atelier Mode: Studio Canvas and Linen"
+            title="Atelier Mode · Studio Canvas & Linen"
+          >
+            <span class="theme-dot dot-atelier" aria-hidden="true"></span>
+            <span class="theme-label">Atelier</span>
+          </button>
+          <button
+            type="button"
+            class="theme-btn"
+            data-theme-set="sun-golden"
+            role="radio"
+            aria-checked="false"
+            aria-label="Sun Golden Mode: Sunlit Amber and Brass"
+            title="Sun Golden Mode · Sunlit Amber & Brass"
+          >
+            <span class="theme-dot dot-sun" aria-hidden="true"></span>
+            <span class="theme-label">Sun Golden</span>
+          </button>
+          <button
+            type="button"
+            class="theme-btn"
+            data-theme-set="nair"
+            role="radio"
+            aria-checked="false"
+            aria-label="Nair Mode: Noir Charcoal and Champagne Gold"
+            title="Nair Mode · Noir Charcoal & Champagne Gold"
+          >
+            <span class="theme-dot dot-nair" aria-hidden="true"></span>
+            <span class="theme-label">Nair</span>
+          </button>
+        </div>
+
         <button
           class="menu-toggle"
           type="button"
@@ -56,6 +96,10 @@
           id="navigation-links"
           aria-label="Main navigation"
         >
+          <div class="mobile-theme-row" aria-hidden="true">
+            <span class="mobile-theme-label">ATMOSPHERE:</span>
+            <span class="mobile-theme-current" id="mobile-theme-current">Atelier</span>
+          </div>
           <a href="#about">About</a>
           <a href="#expertise">Expertise</a>
           <a href="#experience">Experience</a>
@@ -2203,6 +2247,16 @@
       <a class="footer-brand" href="#home" aria-label="Hari Gopal home">
         HG<span>.</span>
       </a>
+
+      <!-- Footer Atmosphere Selector -->
+      <div class="footer-theme-selector">
+        <span class="footer-theme-title">Atmosphere</span>
+        <div class="theme-switcher-footer" role="radiogroup" aria-label="Visual atmosphere mode selection">
+          <button type="button" class="theme-btn-footer is-active" data-theme-set="atelier" role="radio" aria-checked="true">Atelier</button>
+          <button type="button" class="theme-btn-footer" data-theme-set="sun-golden" role="radio" aria-checked="false">Sun Golden</button>
+          <button type="button" class="theme-btn-footer" data-theme-set="nair" role="radio" aria-checked="false">Nair</button>
+        </div>
+      </div>
 
       <p>© <span id="year">2026</span> Hari Gopal Maradani</p>
 
