@@ -295,6 +295,300 @@ if (lightbox && lightboxImage) {
 }
 
 /* ==========================================
+   VIDEO WALKTHROUGHS & QUALITY CONTROLLER
+   ========================================== */
+
+const videoCards = document.querySelectorAll(".video-card");
+const qualityToast = document.querySelector("#quality-toast");
+const toastMessage = document.querySelector("#toast-message");
+let toastTimeout = null;
+
+function showQualityToast(message) {
+  if (!qualityToast || !toastMessage) return;
+  toastMessage.textContent = message;
+  qualityToast.hidden = false;
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    qualityToast.hidden = true;
+  }, 2600);
+}
+
+// Format quality labels
+const qualityLabels = {
+  "4k": "4K UHD",
+  "2k": "2K QHD",
+  "1080p": "1080p FHD",
+  "720p": "720p HD",
+  "480p": "480p SD",
+  "360p": "360p",
+  "auto": "Auto"
+};
+
+// Check display capabilities
+const displayWidth = window.screen.width * (window.devicePixelRatio || 1);
+const isHighDpiDisplay = displayWidth >= 1920;
+
+// Hover to play video cards
+videoCards.forEach((card) => {
+  const video = card.querySelector(".preview-video");
+  const playBadgeText = card.querySelector(".badge-text");
+  const qualityPill = card.querySelector(".video-quality-pill");
+  const qualitySelect = card.querySelector(".video-quality-select");
+
+  if (!video) return;
+
+  video.muted = true;
+  video.playsInline = true;
+
+  function playPreview() {
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          card.classList.add("is-playing");
+          if (playBadgeText) {
+            playBadgeText.textContent = "Playing preview";
+          }
+        })
+        .catch(() => {});
+    }
+  }
+
+  function pausePreview() {
+    video.pause();
+    card.classList.remove("is-playing");
+    if (playBadgeText) {
+      playBadgeText.textContent = "Hover to preview";
+    }
+  }
+
+  card.addEventListener("mouseenter", playPreview);
+  card.addEventListener("mouseleave", pausePreview);
+
+  // Quality selector change
+  if (qualitySelect) {
+    qualitySelect.addEventListener("change", (e) => {
+      e.stopPropagation();
+      const val = qualitySelect.value;
+      const label = qualityLabels[val] || val;
+
+      if (qualityPill) {
+        qualityPill.textContent = label;
+        qualityPill.classList.toggle("is-4k", val === "4k");
+        qualityPill.classList.toggle("is-2k", val === "2k");
+      }
+
+      video.classList.toggle("res-4k", val === "4k");
+      video.classList.toggle("res-2k", val === "2k");
+
+      if (val === "4k") {
+        showQualityToast(isHighDpiDisplay ? "Quality set to 4K (2160p) · Ultra HD Sharpness enabled" : "Quality set to 4K (2160p) · Display Enhanced");
+      } else if (val === "2k") {
+        showQualityToast("Quality set to 2K (1440p) · High Definition mode");
+      } else if (val === "1080p") {
+        showQualityToast("Quality set to 1080p FHD (Full HD)");
+      } else if (val === "720p") {
+        showQualityToast("Quality set to 720p HD");
+      } else if (val === "480p") {
+        showQualityToast("Quality set to 480p SD (Standard)");
+      } else if (val === "360p") {
+        showQualityToast("Quality set to 360p (Data Saver mode)");
+      } else {
+        showQualityToast("Quality set to Auto (Optimal for current connection)");
+      }
+    });
+
+    qualitySelect.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+  }
+});
+
+// Category filter tabs
+const filterButtons = document.querySelectorAll(".video-filters .filter-btn");
+
+filterButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    filterButtons.forEach((b) => {
+      b.classList.remove("is-active");
+      b.setAttribute("aria-selected", "false");
+    });
+    btn.classList.add("is-active");
+    btn.setAttribute("aria-selected", "true");
+
+    const filter = btn.getAttribute("data-filter");
+    videoCards.forEach((card) => {
+      const cat = card.getAttribute("data-category");
+      if (filter === "all" || cat === filter) {
+        card.classList.remove("is-hidden");
+      } else {
+        card.classList.add("is-hidden");
+      }
+    });
+  });
+});
+
+// Theater Mode Modal Player
+const theaterModal = document.querySelector("#video-theater-modal");
+const theaterVideo = document.querySelector("#theater-video");
+const theaterTitle = document.querySelector("#theater-title");
+const theaterCategory = document.querySelector("#theater-category");
+const theaterDescription = document.querySelector("#theater-description");
+const theaterCloseBtn = document.querySelector("#theater-close-btn");
+const theaterQualitySelect = document.querySelector("#theater-quality-select");
+const theaterQualityIndicator = document.querySelector("#theater-quality-indicator");
+const theaterActiveRes = document.querySelector("#theater-active-res");
+
+if (theaterModal && theaterVideo) {
+  let activeCard = null;
+
+  function openTheater(card) {
+    if (!card) return;
+    activeCard = card;
+
+    const previewVideo = card.querySelector(".preview-video");
+    const titleEl = card.querySelector("h3");
+    const title = titleEl ? titleEl.textContent : "Walkthrough";
+    const descEl = card.querySelector("p");
+    const desc = descEl ? descEl.textContent : "";
+    const categoryEl = card.querySelector(".video-category-tag");
+    const category = categoryEl ? categoryEl.textContent : "WALKTHROUGH";
+    const qualitySelect = card.querySelector(".video-quality-select");
+    const chosenQuality = qualitySelect ? qualitySelect.value : "1080p";
+
+    // Pause preview video
+    if (previewVideo) {
+      previewVideo.pause();
+    }
+
+    // Set theater video
+    theaterVideo.src = previewVideo ? previewVideo.src : "";
+    if (previewVideo && previewVideo.currentTime > 0) {
+      theaterVideo.currentTime = previewVideo.currentTime;
+    } else {
+      theaterVideo.currentTime = 0;
+    }
+
+    if (theaterTitle) theaterTitle.textContent = title;
+    if (theaterCategory) theaterCategory.textContent = category;
+    if (theaterDescription) theaterDescription.textContent = desc;
+
+    // Apply quality
+    if (theaterQualitySelect) {
+      theaterQualitySelect.value = chosenQuality;
+    }
+    applyTheaterQuality(chosenQuality);
+
+    if (typeof theaterModal.showModal === "function") {
+      theaterModal.showModal();
+    } else {
+      theaterModal.setAttribute("open", "");
+    }
+
+    theaterVideo.play().catch(() => {});
+    if (theaterCloseBtn) {
+      theaterCloseBtn.focus();
+    }
+  }
+
+  function applyTheaterQuality(val) {
+    const label = qualityLabels[val] || val;
+    if (theaterQualityIndicator) {
+      theaterQualityIndicator.textContent = label;
+    }
+    if (theaterActiveRes) {
+      theaterActiveRes.textContent = label;
+    }
+    theaterVideo.classList.toggle("res-4k", val === "4k");
+    theaterVideo.classList.toggle("res-2k", val === "2k");
+  }
+
+  function closeTheater() {
+    theaterVideo.pause();
+    if (typeof theaterModal.close === "function") {
+      theaterModal.close();
+    } else {
+      theaterModal.removeAttribute("open");
+    }
+    if (activeCard) {
+      const btn = activeCard.querySelector(".video-theater-btn");
+      if (btn) btn.focus();
+    }
+  }
+
+  // Wire up video card clicks to open theater mode
+  videoCards.forEach((card) => {
+    const previewWrapper = card.querySelector(".video-preview-wrapper");
+    const theaterBtn = card.querySelector(".video-theater-btn");
+
+    if (previewWrapper) {
+      previewWrapper.addEventListener("click", () => {
+        openTheater(card);
+      });
+      previewWrapper.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openTheater(card);
+        }
+      });
+    }
+
+    if (theaterBtn) {
+      theaterBtn.addEventListener("click", () => {
+        openTheater(card);
+      });
+    }
+  });
+
+  if (theaterCloseBtn) {
+    theaterCloseBtn.addEventListener("click", closeTheater);
+  }
+
+  if (theaterQualitySelect) {
+    theaterQualitySelect.addEventListener("change", () => {
+      const val = theaterQualitySelect.value;
+      applyTheaterQuality(val);
+      if (activeCard) {
+        const cardSelect = activeCard.querySelector(".video-quality-select");
+        if (cardSelect) {
+          cardSelect.value = val;
+          cardSelect.dispatchEvent(new Event("change"));
+        }
+      }
+    });
+  }
+
+  theaterModal.addEventListener("click", (e) => {
+    const dialogBox = theaterModal.querySelector(".theater-dialog");
+    if (!dialogBox) return;
+    const rect = dialogBox.getBoundingClientRect();
+    const clickedInside = (
+      rect.top <= e.clientY &&
+      e.clientY <= rect.top + rect.height &&
+      rect.left <= e.clientX &&
+      e.clientX <= rect.left + rect.width
+    );
+    if (!clickedInside) {
+      closeTheater();
+    }
+  });
+
+  theaterModal.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeTheater();
+    } else if (e.key === " " && document.activeElement !== theaterQualitySelect) {
+      e.preventDefault();
+      if (theaterVideo.paused) {
+        theaterVideo.play();
+      } else {
+        theaterVideo.pause();
+      }
+    }
+  });
+}
+
+/* ==========================================
    WHATSAPP CONTACT FORM
    ========================================== */
 
